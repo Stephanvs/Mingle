@@ -17,6 +17,7 @@ namespace Mingle
             Lst<Operation> receivedOps)
         {
             OpsCounter = opsCounter;
+            Document = document;
             ReplicaId = replicaId;
             Variables = variables;
             ProcessedOps = processedOps;
@@ -97,9 +98,7 @@ namespace Mingle
                 {
                     case Expr.Doc doc:
                         {
-                            // return fold<Cursor, Cursor, Func<Cursor, Cursor>>(fs, Cursor.Doc(), (f, a) => f(a));
-                            return fs.Aggregate((f, a) => f(a));
-                            // throw new InvalidOperationException();
+                            return fs.Aggregate(Cursor.Doc(), (a, f) => f(a));
                         }
 
                     case Expr.Var var:
@@ -117,7 +116,7 @@ namespace Mingle
 
                     case Expr.DownField df:
                         {
-                            Func<Cursor, Cursor> f = (Cursor c) =>
+                            Cursor Func(Cursor c)
                             {
                                 switch (c.FinalKey)
                                 {
@@ -130,24 +129,27 @@ namespace Mingle
                                             return c.Append(k => new MapT(k), new Key.StrK(df.Key));
                                         }
                                 }
-                            };
+                            }
 
-                            return Go(df.Expr, fs.Add(f));
+                            return Go(df.Expr, fs.Add(Func));
                         }
 
                     case Expr.Iter it:
                         {
-                            Func<Cursor, Cursor> f = (Cursor c) => c.Append(k => new ListT(k), new Key.HeadK());
-                            return Go(it.Expr, fs.Add(f));
+                            Cursor Func(Cursor c)
+                                => c.Append(k => new ListT(k), new Key.HeadK());
+
+                            return Go(it.Expr, fs.Add(Func));
                         }
 
                     case Expr.Next next:
                         {
-                            Func<Cursor, Cursor> f = Document.Next;
-                            return Go(next.Expr, fs.Add(f));
+                            Func<Cursor, Cursor> func = Document.Next;
+                            return Go(next.Expr, fs.Add(func));
                         }
 
-                    default: throw new InvalidOperationException();
+                    default:
+                        throw new InvalidOperationException();
                 }
             }
 

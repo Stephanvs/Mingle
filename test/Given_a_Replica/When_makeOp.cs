@@ -15,7 +15,7 @@ namespace Mingle
                 new Expr.Doc().DownField("key").Assign("A"));
 
         It should_be_a_new_instance = ()
-            => Subject.Should().NotBeSameAs(Original);
+            => ReferenceEquals(Subject, Original).Should().BeFalse();
 
         static Replica Original;
         static Replica Subject;
