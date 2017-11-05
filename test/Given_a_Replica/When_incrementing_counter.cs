@@ -1,8 +1,6 @@
-using System;
 using FluentAssertions;
 using LanguageExt;
 using Machine.Specifications;
-using Xunit;
 
 namespace Mingle
 {
@@ -13,7 +11,7 @@ namespace Mingle
             => Empty = Replica.Empty(ReplicaId.New("abc"));
 
         Because of = ()
-            => Subject = When_incrementing_counter.Empty.IncrementCounter();
+            => Subject = Empty.IncrementCounter();
 
         It should_be_a_new_instance = ()
             => Subject.Should().NotBeSameAs(Empty);
