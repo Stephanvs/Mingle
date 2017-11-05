@@ -3,7 +3,7 @@ using LanguageExt;
 
 namespace Mingle
 {
-    public /*immutable */ class Cursor
+    public /* immutable */ class Cursor
     {
         private Cursor(Lst<BranchTag> keys, Key finalKey)
         {
