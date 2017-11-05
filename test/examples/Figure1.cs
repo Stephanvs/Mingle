@@ -28,25 +28,25 @@ namespace Mingle
             Converged(p2, q2);
         }
 
-        private void Converged(Replica a, Replica b)
+        private static void Converged(Replica a, Replica b)
         {
-            a.ProcessedOps.ShouldAllBeEquivalentTo(b.ProcessedOps);
+            a.ProcessedOps.ShouldBeEquivalentTo(b.ProcessedOps);
             a.Document.ShouldBeEquivalentTo(b.Document);
         }
 
-        private void Converged(Replica a, Replica b, Replica c)
+        private static void Converged(Replica a, Replica b, Replica c)
         {
             Converged(a, b);
             Converged(b, c);
         }
 
-        private void Diverged(Replica a, Replica b)
+        private static void Diverged(Replica a, Replica b)
         {
             a.ProcessedOps.Should().NotBeEquivalentTo(b.ProcessedOps);
             a.Document.Should().NotBe(b.Document);
         }
 
-        private Replica Merge(Replica a, Replica b)
+        private static Replica Merge(Replica a, Replica b)
             => a.ApplyRemoteOps(b.GeneratedOps);
     }
 }
