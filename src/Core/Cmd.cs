@@ -1,94 +1,114 @@
 using System;
+using LanguageExt;
 
 namespace Mingle
 {
     public abstract class BeforeAfter { }
 
-    public class Before : BeforeAfter { }
+    public sealed class Before : BeforeAfter { }
 
-    public class After : BeforeAfter { }
+    public sealed class After : BeforeAfter { }
 
-    public abstract class Cmd
+    public interface Cmd
     {
-        public sealed class Let : Cmd
+    }
+
+    public sealed class Let : Record<Let>, Cmd
+    {
+        private readonly Var _x;
+        private readonly Expr _expr;
+
+        public Let(Var x, Expr expr)
         {
-            public Let(Expr.Var x, Expr expr)
-            {
-                X = x;
-                Expr = expr;
-            }
-
-            public Expr.Var X { get; }
-
-            public Expr Expr { get; }
+            _x = x;
+            _expr = expr;
         }
 
-        public sealed class Assign : Cmd
+        public Var X => _x;
+
+        public Expr Expr => _expr;
+    }
+
+    public sealed class Assign : Record<Assign>, Cmd
+    {
+        private readonly Expr _expr;
+        private readonly Val _value;
+
+        public Assign(Expr expr, Val value)
         {
-            public Assign(Expr expr, Val value)
-            {
-                Expr = expr;
-                Value = value;
-            }
-
-            public Expr Expr { get; }
-
-            public Val Value { get; }
+            _expr = expr;
+            _value = value;
         }
 
-        public sealed class Insert : Cmd
+        public Expr Expr => _expr;
+
+        public Val Value => _value;
+    }
+
+    public sealed class Insert : Record<Insert>, Cmd
+    {
+        private readonly Expr _expr;
+        private readonly Val _value;
+
+        public Insert(Expr expr, Val value)
         {
-            public Insert(Expr expr, Val value)
-            {
-                Expr = expr;
-                Value = value;
-            }
-
-            public Expr Expr { get; }
-
-            public Val Value { get; }
+            _expr = expr;
+            _value = value;
         }
 
-        public sealed class Delete : Cmd
-        {
-            public Delete(Expr expr)
-            {
-                Expr = expr;
-            }
+        public Expr Expr => _expr;
 
-            public Expr Expr { get; }
+        public Val Value => _value;
+    }
+
+    public sealed class Delete : Record<Delete>, Cmd
+    {
+        private readonly Expr _expr;
+
+        public Delete(Expr expr)
+        {
+            _expr = expr;
         }
 
-        public sealed class MoveVertical : Cmd
+        public Expr Expr => _expr;
+    }
+
+    public sealed class MoveVertical : Record<MoveVertical>, Cmd
+    {
+        private readonly Expr _moveExpr;
+        private readonly Expr _targetExpr;
+        private readonly BeforeAfter _beforeAfter;
+
+        public MoveVertical(
+            Expr moveExpr,
+            Expr targetExpr,
+            BeforeAfter beforeAfter)
         {
-            public MoveVertical(
-                Expr moveExpr,
-                Expr targetExpr,
-                BeforeAfter beforeAfter)
-            {
-                MoveExpr = moveExpr;
-                TargetExpr = targetExpr;
-                BeforeAfter = beforeAfter;
-            }
-
-            public Expr MoveExpr { get; }
-
-            public Expr TargetExpr { get; }
-
-            public BeforeAfter BeforeAfter { get; }
+            _moveExpr = moveExpr;
+            _targetExpr = targetExpr;
+            _beforeAfter = beforeAfter;
         }
 
-        public sealed class Sequence : Cmd
+        public Expr MoveExpr => _moveExpr;
+
+        public Expr TargetExpr => _targetExpr;
+
+        public BeforeAfter BeforeAfter => _beforeAfter;
+    }
+
+    public sealed class Sequence : Record<Sequence>, Cmd
+    {
+        private readonly Cmd _cmd1;
+        private readonly Cmd _cmd2;
+
+        public Sequence(Cmd cmd1, Cmd cmd2)
         {
-            public Sequence(Cmd cmd1, Cmd cmd2)
-            {
-                Cmd1 = cmd1;
-                Cmd2 = cmd2;
-            }
-
-            public Cmd Cmd1 { get; }
-
-            public Cmd Cmd2 { get; }
+            _cmd1 = cmd1;
+            _cmd2 = cmd2;
         }
+
+        public Cmd Cmd1 => _cmd1;
+
+        public Cmd Cmd2 => _cmd2;
     }
 }

@@ -27,7 +27,7 @@ namespace Mingle
         }
 
         public static Cursor Doc()
-            => WithFinalKey(new Key.DocK());
+            => WithFinalKey(new DocK());
 
         public static Cursor WithFinalKey(Key finalKey)
             => new Cursor(Lst<BranchTag>.Empty, finalKey);
@@ -36,27 +36,32 @@ namespace Mingle
         {
         }
 
-        public class Leaf : IView
+        public class Leaf : Record<Leaf>, IView
         {
+            private readonly Key _finalKey;
+
             public Leaf(Key finalKey)
             {
-                FinalKey = finalKey;
+                _finalKey = finalKey;
             }
 
-            public Key FinalKey { get; }
+            public Key FinalKey => _finalKey;
         }
 
-        public class Branch : IView
+        public class Branch : Record<Branch>, IView
         {
+            private readonly BranchTag _head;
+            private readonly Cursor _tail;
+
             public Branch(BranchTag head, Cursor tail)
             {
-                Head = head;
-                Tail = tail;
+                _head = head;
+                _tail = tail;
             }
 
-            public BranchTag Head { get; }
+            public BranchTag Head => _head;
 
-            public Cursor Tail { get; }
+            public Cursor Tail => _tail;
         }
     }
 }

@@ -8,8 +8,8 @@ namespace Mingle
         {
             switch (key)
             {
-                case Key.IdK k: return new IdR(k.Id);
-                case Key.HeadK _: return new HeadR();
+                case IdK k: return new IdR(k.Id);
+                case HeadK _: return new HeadR();
                 default: return new TailR();
             }
         }
@@ -21,8 +21,8 @@ namespace Mingle
         {
             switch (this)
             {
-                case IdR r: return new Key.IdK(r.Id);
-                case HeadR _: return new Key.HeadK();
+                case IdR r: return new IdK(r.Id);
+                case HeadR _: return new HeadK();
             }
 
             throw new InvalidOperationException(
@@ -30,8 +30,6 @@ namespace Mingle
                 + " Are you illegaly subclassing {nameof(KeyRef)}?");
         }
     }
-
-    public sealed class HeadR : KeyRef { }
 
     public class IdR : KeyRef
     {
@@ -42,6 +40,8 @@ namespace Mingle
 
         public Id Id { get; }
     }
+
+    public sealed class HeadR : KeyRef { }
 
     public sealed class TailR : ListRef { }
 }

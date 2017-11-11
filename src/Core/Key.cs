@@ -1,31 +1,57 @@
 using System;
+using LanguageExt;
 
 namespace Mingle
 {
-    public class Key
+    public interface Key : IComparable
     {
-        public class DocK : Key { }
+    }
 
-        public class HeadK : Key { }
+    public class DocK : Record<DocK>, Key
+    {
+        public int CompareTo(object obj) => 0;
+    }
 
-        public sealed class IdK : Key
+    public class HeadK : Record<HeadK>, Key
+    {
+        public int CompareTo(object obj) => 0;
+    }
+
+    public sealed class IdK : Record<IdK>, Key
+    {
+        private readonly Id _id;
+
+        public IdK(Id id)
         {
-            public IdK(Id id)
-            {
-                Id = id;
-            }
-
-            public Id Id { get; }
+            _id = id;
         }
 
-        public sealed class StrK : Key
-        {
-            public StrK(string str)
-            {
-                Str = str;
-            }
+        public Id Id => _id;
 
-            public string Str { get; }
+        public int CompareTo(object obj)
+        {
+            return obj is IdK id
+                ? id.Id.CompareTo(this.Id)
+                : 0;
+        }
+    }
+
+    public sealed class StrK : Record<StrK>, Key
+    {
+        private readonly string _str;
+
+        public StrK(string str)
+        {
+            _str = str;
+        }
+
+        public string Str => _str;
+
+        public int CompareTo(object obj)
+        {
+            return obj is StrK k
+                ? k.Str.CompareTo(this.Str)
+                : 0;
         }
     }
 }

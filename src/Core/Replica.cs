@@ -5,13 +5,13 @@ using static LanguageExt.Prelude;
 
 namespace Mingle
 {
-    public /* immutable */ sealed class Replica
+    public /* immutable */ sealed class Replica : Record<Replica>
     {
         private Replica(
             ReplicaId replicaId,
             bigint opsCounter,
             Node document,
-            Map<Expr.Var, Cursor> variables,
+            Map<Var, Cursor> variables,
             Set<Id> processedOps,
             Lst<Operation> generatedOps,
             Lst<Operation> receivedOps)
@@ -31,7 +31,7 @@ namespace Mingle
 
         public Node Document { get; }
 
-        public Map<Expr.Var, Cursor> Variables { get; }
+        public Map<Var, Cursor> Variables { get; }
 
         public Set<Id> ProcessedOps { get; }
 
@@ -96,12 +96,12 @@ namespace Mingle
             {
                 switch (ex)
                 {
-                    case Expr.Doc doc:
+                    case Doc doc:
                         {
                             return fs.Aggregate(Cursor.Doc(), (a, f) => f(a));
                         }
 
-                    case Expr.Var var:
+                    case Var var:
                         {
                             // return Variables.Match(var)
                             //     .Some(cur => cur)
@@ -114,19 +114,19 @@ namespace Mingle
                             throw new InvalidOperationException();
                         }
 
-                    case Expr.DownField df:
+                    case DownField df:
                         {
                             Cursor Func(Cursor c)
                             {
                                 switch (c.FinalKey)
                                 {
-                                    case Key.HeadK hk:
+                                    case HeadK hk:
                                         {
                                             return c;
                                         }
                                     default:
                                         {
-                                            return c.Append(k => new MapT(k), new Key.StrK(df.Key));
+                                            return c.Append(k => new MapT(k), new StrK(df.Key));
                                         }
                                 }
                             }
@@ -134,15 +134,15 @@ namespace Mingle
                             return Go(df.Expr, fs.Add(Func));
                         }
 
-                    case Expr.Iter it:
+                    case Iter it:
                         {
                             Cursor Func(Cursor c)
-                                => c.Append(k => new ListT(k), new Key.HeadK());
+                                => c.Append(k => new ListT(k), new HeadK());
 
                             return Go(it.Expr, fs.Add(Func));
                         }
 
-                    case Expr.Next next:
+                    case Next next:
                         {
                             Func<Cursor, Cursor> func = Document.Next;
                             return Go(next.Expr, fs.Add(func));
@@ -163,7 +163,7 @@ namespace Mingle
                 {
                     switch (cmd)
                     {
-                        case Cmd.Let let:
+                        case Let let:
                             {
                                 var cur = replica.EvalExpr(let.Expr);
                                 var newReplica = replica.Copy(
@@ -172,25 +172,25 @@ namespace Mingle
                                 return Replica.ApplyCmds(newReplica, rest.Freeze());
                             }
 
-                        case Cmd.Assign assign:
+                        case Assign assign:
                             {
                                 var newReplica = replica.MakeOp(replica.EvalExpr(assign.Expr), new AssignM(assign.Value));
                                 return Replica.ApplyCmds(newReplica, rest.Freeze());
                             }
 
-                        case Cmd.Insert ins:
+                        case Insert ins:
                             {
                                 var newReplica = replica.MakeOp(replica.EvalExpr(ins.Expr), new InsertM(ins.Value));
                                 return Replica.ApplyCmds(newReplica, rest.Freeze());
                             }
 
-                        case Cmd.Delete del:
+                        case Delete del:
                             {
                                 var newReplica = replica.MakeOp(replica.EvalExpr(del.Expr), new DeleteM());
                                 return Replica.ApplyCmds(newReplica, rest.Freeze());
                             }
 
-                        case Cmd.MoveVertical mv:
+                        case MoveVertical mv:
                             {
                                 var newReplica = replica.MakeOp(
                                     replica.EvalExpr(mv.MoveExpr),
@@ -201,7 +201,7 @@ namespace Mingle
                                 return Replica.ApplyCmds(newReplica, rest.Freeze());
                             }
 
-                        case Cmd.Sequence seq:
+                        case Sequence seq:
                             {
                                 return Replica.ApplyCmds(
                                     replica,
@@ -218,7 +218,7 @@ namespace Mingle
                 replicaId,
                 opsCounter: bigint.Zero,
                 document: Node.EmptyMap,
-                variables: Map<Expr.Var, Cursor>(),
+                variables: Map<Var, Cursor>(),
                 processedOps: Set<Id>(),
                 generatedOps: Lst<Operation>.Empty,
                 receivedOps: Lst<Operation>.Empty);
@@ -227,7 +227,7 @@ namespace Mingle
             ReplicaId replicaId = null,
             bigint? opsCounter = null,
             Node document = null,
-            Map<Expr.Var, Cursor>? variables = null,
+            Map<Var, Cursor>? variables = null,
             Set<Id>? processedOps = null,
             Lst<Operation>? generatedOps = null,
             Lst<Operation>? receivedOps = null)

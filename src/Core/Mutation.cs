@@ -1,45 +1,53 @@
 using System;
+using LanguageExt;
 
 namespace Mingle
 {
-    public abstract class Mutation
+    public interface Mutation
     {
     }
 
-    public sealed class AssignM : Mutation
+    public sealed class AssignM : Record<AssignM>, Mutation
     {
+        private readonly Val _value;
+
         public AssignM(Val value)
         {
-            Value = value;
+            _value = value;
         }
 
-        public Val Value { get; }
+        public Val Value => _value;
     }
-    
-    public sealed class InsertM : Mutation
+
+    public sealed class InsertM : Record<InsertM>, Mutation
     {
+        private readonly Val _value;
+
         public InsertM(Val value)
         {
-            Value = value;
+            _value = value;
         }
 
-        public Val Value { get; }
+        public Val Value => _value;
     }
 
-    public sealed class DeleteM : Mutation
+    public sealed class DeleteM : Record<DeleteM>, Mutation
     {
     }
 
-    public sealed class MoveVerticalM : Mutation
+    public sealed class MoveVerticalM : Record<MoveVerticalM>, Mutation
     {
+        private readonly Cursor _targetCursor;
+        private readonly BeforeAfter _aboveBelow;
+
         public MoveVerticalM(Cursor targetCursor, BeforeAfter aboveBelow)
         {
-            TargetCursor = targetCursor;
-            AboveBelow = aboveBelow;
+            _targetCursor = targetCursor;
+            _aboveBelow = aboveBelow;
         }
 
-        public Cursor TargetCursor { get; }
-        
-        public BeforeAfter AboveBelow { get; }
+        public Cursor TargetCursor => _targetCursor;
+
+        public BeforeAfter AboveBelow => _aboveBelow;
     }
 }

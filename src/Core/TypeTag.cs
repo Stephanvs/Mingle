@@ -1,37 +1,52 @@
 using System;
+using LanguageExt;
 
 namespace Mingle
 {
-    public interface TypeTag
+    public interface TypeTag : IComparable
     {
         Key Key { get; }
     }
 
-    public abstract class BranchTag : TypeTag
+    public interface BranchTag : TypeTag
     {
-        protected BranchTag(Key key)
+    }
+
+    public sealed class MapT : Record<MapT>, BranchTag
+    {
+        public MapT(Key key)
         {
             Key = key;
         }
 
         public Key Key { get; }
-    }
 
-    public sealed class MapT : BranchTag
-    {
-        public MapT(Key key) : base(key)
+        public int CompareTo(object obj)
         {
+            return (obj is MapT o)
+                ? o.Key.CompareTo(this.Key)
+                : 0;
         }
     }
 
-    public sealed class ListT : BranchTag
+    public sealed class ListT : Record<ListT>, BranchTag
     {
-        public ListT(Key key) : base(key)
+        public ListT(Key key)
         {
+            Key = key;
+        }
+
+        public Key Key { get; }
+
+        public int CompareTo(object obj)
+        {
+            return (obj is ListT o)
+                ? o.Key.CompareTo(this.Key)
+                : 0;
         }
     }
 
-    public sealed class RegT : TypeTag
+    public sealed class RegT : Record<RegT>, TypeTag
     {
         public RegT(Key key)
         {
@@ -39,5 +54,12 @@ namespace Mingle
         }
 
         public Key Key { get; }
+
+        public int CompareTo(object obj)
+        {
+            return (obj is RegT o)
+                ? o.Key.CompareTo(this.Key)
+                : 0;
+        }
     }
 }

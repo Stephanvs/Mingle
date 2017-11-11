@@ -1,19 +1,20 @@
-using System;
-using System.Numerics;
 using LanguageExt;
 
 namespace Mingle
 {
-    public /* immutable */ sealed class Id
+    public /* immutable */ sealed class Id : Record<Id>
     {
+        private readonly bigint _opsCounter;
+        private readonly ReplicaId _replicaId;
+
         public Id(bigint opsCounter, ReplicaId replicaId)
         {
-            OpsCounter = opsCounter;
-            ReplicaId = replicaId;
+            _opsCounter = opsCounter;
+            _replicaId = replicaId;
         }
 
-        public bigint OpsCounter { get; }
+        public bigint OpsCounter => _opsCounter;
 
-        public ReplicaId ReplicaId { get; }
+        public ReplicaId ReplicaId => _replicaId;
     }
 }

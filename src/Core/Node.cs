@@ -1,15 +1,27 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using LanguageExt;
 using static LanguageExt.Prelude;
 
 namespace Mingle
 {
-    public abstract class Node
+    public abstract class Node : Record<Node>
     {
         public static Node EmptyMap
             => new MapNode(
-                Map<TypeTag, Node>(),
-                Map<Key, Set<Id>>());
+                LanguageExt.Map<TypeTag, Node>.Empty,
+                LanguageExt.Map<Key, Set<Id>>.Empty);
+
+        public static Node EmptyList
+            => new ListNode(
+                LanguageExt.Map<TypeTag, Node>.Empty,
+                LanguageExt.Map<Key, Set<Id>>.Empty,
+                LanguageExt.Map<ListRef, ListRef>.Empty,
+                LanguageExt.Map<bigint, Map<ListRef, ListRef>>.Empty);
+
+        public static Node EmptyReg
+            => new RegNode(LanguageExt.Map<Id, LeafVal>.Empty);
 
         public Cursor Next(Cursor cursor)
         {
@@ -63,22 +75,233 @@ namespace Mingle
             throw new NotImplementedException();
         }
 
-        public Node ApplyOp(Operation operation, Replica replica)
+        public Node ApplyOp(Operation op, Replica replica)
         {
-            var view = operation.Cursor.View();
+            var view = op.Cursor.View();
             switch (view)
             {
                 case Cursor.Leaf l:
                     {
-                        break;
+                        switch (this)
+                        {
+                            case ListNode ln:
+                                {
+                                    IEnumerable<Operation> ConcurrentOpsSince(bigint count)
+                                    {
+                                        var allOps = replica.GeneratedOps.Append(replica.ReceivedOps);
+
+                                        throw new NotImplementedException();
+                                    }
+
+                                    var concurrentOps = ConcurrentOpsSince(op.Id.OpsCounter);
+
+                                    if (concurrentOps.Length() > 1
+                                        && concurrentOps.Select(x => x.Mutation).OfType<MoveVerticalM>().Length() >= 1)
+                                    {
+                                        //  Before applying an operation we save the order in orderArchive.
+                                        // It's a Map whose key is the lamport timestamp counter value.
+                                        // To improve performance and save disk space, we don't save the
+                                        // order before assign operations, since they don't change the order.
+                                        // Now there might be this situation: Alice did an assign and then a
+                                        // move op, while Bob did a move op. Now Bobs op comes in and
+                                        // Alice resets her order to the order with counter value like the
+                                        // incoming op. However, locally exists no such saved order, since
+                                        // she has done an assign op at that count. Therefore she resets
+                                        // to the next higher saved order.
+                                        // This fix is implemented by getting all orders whose counter is
+                                        // greater equals than the counter of the incoming op and then
+                                        // choosing the earliest order of those:
+                                        var newerOrders = ln.OrderArchive.Filter((k, v) => k >= op.Id.OpsCounter);
+
+                                        // restore the order
+                                        // TODO: 
+                                        // val ctx1 =
+                                        //     if (newerOrders.nonEmpty) ln.copy(order = newerOrders.minBy {
+                                        //         case (c, _) => c
+                                        //     }._2)
+                                        //     else this
+                                        throw new NotImplementedException();
+
+                                        // Node ctx1 = this;
+
+                                        // return ctx1.ApplyMany(concurrentOps.OrderBy(x => x.Id));
+                                    }
+                                    else
+                                    {
+                                        // The op was done without me doing an op concurrently, so there is
+                                        // no need to restore anything. Just apply the op.
+                                        return ApplyAtLeaf(op, replica);
+                                    }
+                                }
+                            default: return ApplyAtLeaf(op, replica);
+                        }
+                        throw new InvalidOperationException("Invalid Cursor type");
                     }
-                case Cursor.Branch b:
+                case Cursor.Branch bn:
                     {
-                        break;
+                        var child0 = GetChild(bn.Head);
+                        var child1 = child0.ApplyOp(op.Copy(cursor: bn.Tail), replica);
+                        var ctx1 = AddId(bn.Head, op.Id, op.Mutation);
+                        return ctx1.AddNode(bn.Head, child1);
                     }
             }
 
             return this;
+        }
+
+        private Node ApplyAtLeaf(Operation op, Replica replica)
+        {
+            var k = op.Cursor.FinalKey;
+
+            switch (op.Mutation)
+            {
+                case AssignM ass:
+                    {
+                        if (ass.Value is BranchVal)
+                        {
+                            BranchTag tag;
+
+                            if (ass.Value.Equals(EmptyMap))
+                            {
+                                tag = new MapT(k);
+                            }
+                            else
+                            {
+                                tag = new ListT(k);
+                            }
+
+                            var (ctx1, _) = ClearElem(op.Deps, k);
+                            var ctx2 = ctx1.AddId(tag, op.Id, op.Mutation);
+                            var child = ctx2.GetChild(tag);
+
+                            return ctx2.AddNode(tag, child);
+                        }
+                        else if (ass.Value is LeafVal leafVal)
+                        {
+                            var tag = new RegT(k);
+                            var (ctx1, _) = Clear(op.Deps, tag);
+                            var ctx2 = ctx1.AddId(tag, op.Id, op.Mutation);
+                            var child = ctx2.GetChild(tag);
+
+                            return ctx2.AddNode(tag, child.AddRegValue(op.Id, leafVal));
+                        }
+
+                        throw new InvalidOperationException(
+                            $"Assingment of value type {ass.Value.GetType().Name} is invalid");
+                    }
+                case DeleteM del:
+                    {
+                        throw new NotImplementedException();
+                    }
+                case InsertM ins:
+                    {
+                        throw new NotImplementedException();
+                    }
+                case MoveVerticalM mv:
+                    {
+                        throw new NotImplementedException();
+                    }
+                default: throw new InvalidOperationException("Invalid Mutation occurred.");
+            }
+        }
+
+        private Node AddNode(TypeTag tag, Node node)
+        {
+            switch (this)
+            {
+                case BranchNode n: return n.WithChildren(n.Children.AddOrUpdate(tag, node));
+                default: return this;
+            }
+        }
+
+        private Node AddRegValue(Id id, LeafVal value)
+        {
+            switch (this)
+            {
+                case RegNode r: return r.Copy(regValues: r.RegValues.AddOrUpdate(id, value));
+                default: return this;
+            }
+        }
+
+        private Node AddId(TypeTag tag, Id id, Mutation mutation)
+        {
+            switch (mutation)
+            {
+                case DeleteM del: return this;
+                default: return SetPres(tag.Key, GetPres(tag.Key).Add(id));
+            }
+        }
+
+        private (Node, Set<Id>) ClearElem(Set<Id> deps, Key key)
+        {
+            throw new NotImplementedException();
+        }
+
+        private (Node, Set<Id>) ClearAny(Set<Id> deps, Key key)
+        {
+            throw new NotImplementedException();
+        }
+
+        private (Node, Set<Id>) Clear(Set<Id> deps, TypeTag tag)
+            => FindChild(tag)
+                .Match(
+                    Some: node =>
+                    {
+                        switch (node)
+                        {
+                            case RegNode rn:
+                                {
+                                    var concurrent = rn.RegValues.Filter((id, lv) => !deps.Contains(id));
+                                    var retNode = AddNode(tag, new RegNode(concurrent));
+                                    return (retNode, new Set<Id>(concurrent.Keys));
+                                }
+                            case MapNode mn:
+                                {
+                                    var (cleared, pres) = mn.ClearMap(deps, new Set<Key>());
+                                    var retNode = AddNode(tag, cleared);
+                                    return (retNode, pres);
+                                }
+                            case ListNode ln:
+                                {
+                                    var (cleared, pres) = ln.ClearList(deps, new HeadR());
+                                    var retNode = AddNode(tag, cleared);
+                                    return (retNode, pres);
+                                }
+                        }
+
+                        throw new InvalidOperationException($"Invalid node type of {node.GetType().Name}");
+                    },
+                    None: () => (this, new Set<Id>()));
+
+        private (Node, Set<Id>) ClearMap(Set<Id> deps, Set<Key> done)
+        {
+            throw new NotImplementedException();
+        }
+
+        private (Node, Set<Id>) ClearList(Set<Id> deps, ListRef @ref)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Node GetChild(TypeTag tag)
+            => FindChild(tag).IfNone(() =>
+            {
+                switch (tag)
+                {
+                    case MapT m: return Node.EmptyMap;
+                    case ListT l: return Node.EmptyList;
+                    case RegT r: return Node.EmptyReg;
+                    default: throw new InvalidOperationException("Invalid TypeTag.");
+                }
+            });
+
+        private Option<Node> FindChild(TypeTag tag)
+        {
+            switch (this)
+            {
+                case BranchNode n: return n.Children.Find(tag);
+                default: return None;
+            }
         }
 
         private Set<Id> GetPres(Key key)
@@ -87,6 +310,26 @@ namespace Mingle
             {
                 case BranchNode n: return n.PresSets.ContainsKey(key) ? n.PresSets[key] : Set<Id>();
                 default: return Set<Id>();
+            }
+        }
+
+        private Node SetPres(Key key, Set<Id> pres)
+        {
+            switch (this)
+            {
+                case BranchNode n:
+                    {
+                        Map<K, Set<V>> RemoveOrUpdate<K, V>(Map<K, Set<V>> map, K k, Set<V> val)
+                            where K : class
+                        {
+                            return (val.Length() == 0)
+                                ? map.Remove(k)
+                                : map.AddOrUpdate(k, val);
+                        }
+
+                        return n.WithPresSets(RemoveOrUpdate(n.PresSets, key, pres));
+                    }
+                default: return this;
             }
         }
 
@@ -102,17 +345,20 @@ namespace Mingle
 
     public abstract class BranchNode : Node
     {
+        private readonly Map<TypeTag, Node> _children;
+        private readonly Map<Key, Set<Id>> _presSets;
+
         public BranchNode(
             Map<TypeTag, Node> children,
             Map<Key, Set<Id>> presSets)
         {
-            Children = children;
-            PresSets = presSets;
+            _children = children;
+            _presSets = presSets;
         }
 
-        public virtual Map<TypeTag, Node> Children { get; }
+        public Map<TypeTag, Node> Children => _children;
 
-        public virtual Map<Key, Set<Id>> PresSets { get; }
+        public Map<Key, Set<Id>> PresSets => _presSets;
 
         public abstract BranchNode WithChildren(Map<TypeTag, Node> children);
 
@@ -129,18 +375,46 @@ namespace Mingle
         }
 
         public override BranchNode WithChildren(Map<TypeTag, Node> children)
-        {
-            throw new NotImplementedException();
-        }
+            => Copy(children: children);
 
         public override BranchNode WithPresSets(Map<Key, Set<Id>> presSets)
+            => Copy(presSets: presSets);
+
+        // public override bool Equals(object obj)
+        // {
+        //     if (obj is MapNode mn)
+        //     {
+        //         return Children.Equals(mn.Children)
+        //             && PresSets.Equals(mn.PresSets);
+        //     }
+
+        //     return false;
+        // }
+
+        // public override int GetHashCode()
+        // {
+        //     return Children.GetHashCode()
+        //          ^ PresSets.GetHashCode();
+        // }
+
+        private MapNode Copy(
+            Map<TypeTag, Node>? children = null,
+            Map<Key, Set<Id>>? presSets = null)
         {
-            throw new NotImplementedException();
+            return new MapNode(
+                children ?? Children,
+                presSets ?? PresSets);
         }
     }
 
     public class ListNode : BranchNode
     {
+        private readonly Map<ListRef, ListRef> _order;
+
+        [OptOutOfEq]
+        [OptOutOfOrd]
+        private readonly Map<bigint, Map<ListRef, ListRef>> _orderArchive;
+
         public ListNode(
             Map<TypeTag, Node> children,
             Map<Key, Set<Id>> presSets,
@@ -148,13 +422,13 @@ namespace Mingle
             Map<bigint, Map<ListRef, ListRef>> orderArchive)
             : base(children, presSets)
         {
-            Order = order;
-            OrderArchive = orderArchive;
+            _order = order;
+            _orderArchive = orderArchive;
         }
 
-        public Map<ListRef, ListRef> Order { get; }
+        public Map<ListRef, ListRef> Order => _order;
 
-        public Map<bigint, Map<ListRef, ListRef>> OrderArchive { get; }
+        public Map<bigint, Map<ListRef, ListRef>> OrderArchive => _orderArchive;
 
         public override BranchNode WithChildren(Map<TypeTag, Node> children)
         {
@@ -166,37 +440,42 @@ namespace Mingle
             throw new NotImplementedException();
         }
 
-        /** The tests cannot converge, since the orderArchive of two replicas is
-        * always different. Therefore don't compare the orderArchive.
-        */
-        public override bool Equals(object obj)
-        {
-            if (obj is ListNode ln)
-            {
-                return ln.Children == Children
-                    && ln.PresSets == PresSets
-                    && ln.Order == Order;
-            }
+        // /** The tests cannot converge, since the orderArchive of two replicas is
+        // * always different. Therefore don't compare the orderArchive.
+        // */
+        // public override bool Equals(object obj)
+        // {
+        //     if (obj is ListNode ln)
+        //     {
+        //         return ln.Children == Children
+        //             && ln.PresSets == PresSets
+        //             && ln.Order == Order;
+        //     }
 
-            return base.Equals(obj);
-        }
+        //     return base.Equals(obj);
+        // }
 
-        public override int GetHashCode()
-        {
-            throw new NotImplementedException();
-        }
+        // public override int GetHashCode()
+        // {
+        //     throw new NotImplementedException();
+        // }
     }
 
     public class RegNode : Node
     {
+        private readonly Map<Id, LeafVal> _regValues;
+
         public RegNode(Map<Id, LeafVal> regValues)
         {
-            RegValues = regValues;
+            _regValues = regValues;
         }
 
-        public Map<Id, LeafVal> RegValues { get; }
+        public Map<Id, LeafVal> RegValues => _regValues;
 
         public Lst<LeafVal> Values()
             => new Lst<LeafVal>(RegValues.Values);
+
+        public RegNode Copy(Map<Id, LeafVal>? regValues = null)
+            => new RegNode(regValues ?? _regValues);
     }
 }

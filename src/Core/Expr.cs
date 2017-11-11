@@ -1,54 +1,65 @@
 using System;
+using LanguageExt;
 
 namespace Mingle
 {
-    public abstract class Expr
+    public interface Expr
     {
-        public class Doc : Expr
+    }
+
+    public sealed class Doc : Record<Doc>, Expr
+    {
+    }
+
+    public sealed class Var : Record<Var>, Expr
+    {
+        private readonly string _name;
+
+        public Var(string name)
         {
+            _name = name;
         }
 
-        public sealed class Var : Expr
-        {
-            public Var(string name)
-            {
-                Name = name;
-            }
+        public string Name => _name;
+    }
 
-            public string Name { get; }
+    public sealed class DownField : Record<DownField>, Expr
+    {
+        private readonly Expr _expr;
+        private readonly string _key;
+
+        public DownField(Expr expr, string key)
+        {
+            _expr = expr;
+            _key = key;
         }
 
-        public sealed class DownField : Expr
+        public Expr Expr => _expr;
+
+        public string Key => _key;
+    }
+
+    public sealed class Iter : Record<Iter>, Expr
+    {
+        private readonly Expr _expr;
+
+        public Iter(Expr expr)
         {
-            public DownField(Expr expr, string key)
-            {
-                Expr = expr;
-                Key = key;
-            }
-
-            public Expr Expr { get; }
-
-            public string Key { get; }
+            _expr = expr;
         }
 
-        public sealed class Iter : Expr
-        {
-            public Iter(Expr expr)
-            {
-                Expr = expr;
-            }
+        public Expr Expr => _expr;
+    }
 
-            public Expr Expr { get; }
+    public sealed class Next : Record<Next>, Expr
+    {
+        private readonly Expr _expr;
+
+        public Next(Expr expr)
+        {
+            _expr = expr;
         }
 
-        public sealed class Next : Expr
-        {
-            public Next(Expr expr)
-            {
-                Expr = expr;
-            }
-
-            public Expr Expr { get; }
-        }
+        public Expr Expr => _expr;
     }
 }

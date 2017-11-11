@@ -8,7 +8,7 @@ namespace Mingle
     public interface LeafVal : Val { }
     public interface BranchVal : Val { }
 
-    public sealed class Num : LeafVal
+    public sealed class Num : Record<Num>, LeafVal
     {
         public Num(bigint value)
         {
@@ -18,7 +18,7 @@ namespace Mingle
         public bigint Value { get; }
     }
 
-    public sealed class Str : LeafVal
+    public sealed class Str : Record<Str>, LeafVal
     {
         public Str(string value)
         {
