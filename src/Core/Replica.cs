@@ -51,7 +51,7 @@ namespace Mingle
         public Replica ApplyLocal(Operation operation)
             => Copy(
                 document: Document.ApplyOp(operation, this),
-                processedOps: ProcessedOps.Add(operation.Id),
+                processedOps: ProcessedOps.TryAdd(operation.Id),
                 generatedOps: GeneratedOps.Add(operation));
 
         // Tail recursion

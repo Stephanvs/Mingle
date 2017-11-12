@@ -228,7 +228,11 @@ namespace Mingle
             switch (mutation)
             {
                 case DeleteM del: return this;
-                default: return SetPres(tag.Key, GetPres(tag.Key).Add(id));
+                default: {
+                        var pres = GetPres(tag.Key);
+                        var presP = pres.AddOrUpdate(id);
+                        return SetPres(tag.Key, presP);   
+                    }
             }
         }
 

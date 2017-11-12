@@ -18,7 +18,7 @@ namespace Mingle
             // Assert that p0 and q0 are converged
             Converged(p0, q0);
 
-            var p1 = p0.ApplyCmd(new Doc().DownField("keyA").Assign("B"));
+            var p1 = p0.ApplyCmd(new Doc().DownField("key").Assign("B"));
             var q1 = q0.ApplyCmd(new Doc().DownField("key").Assign("C"));
 
             // Assert that p1 and q1 are diverged
@@ -33,21 +33,10 @@ namespace Mingle
 
         private static void Converged(Replica a, Replica b)
         {
-            a.ProcessedOps.Should().Equal(b.ProcessedOps);
-            //Assert.Equal(a.Document, b.Document);
-            a.Document.Should().Be(b.Document);
-
-            // var mapNode = a.Document as MapNode;
-
-
-            //((MapNode)a.Document).Children.Should().BeEquivalentTo(((MapNode)b.Document).Children);
-
-            //Assert.True(a.Document == b.Document);
-
-            // var aJson = JsonConvert.SerializeObject(a.Document);
-            // var bJson = JsonConvert.SerializeObject(b.Document);
-
-            // Assert.True(aJson == bJson);
+            Assert.True(a.ProcessedOps == b.ProcessedOps);;
+            //a.ProcessedOps.ShouldBeEquivalentTo(b.ProcessedOps);
+            //a.Document.Should().Be(b.Document);
+            Assert.True(a.Document == b.Document);
         }
 
         private static void Converged(Replica a, Replica b, Replica c)
@@ -58,13 +47,10 @@ namespace Mingle
 
         private static void Diverged(Replica a, Replica b)
         {
-            a.ProcessedOps.Should().NotEqual(b.ProcessedOps);
+            Assert.True(a.ProcessedOps != b.ProcessedOps);
+            //a.ProcessedOps.Should().NotBeEquivalentTo(b.ProcessedOps);
+            Assert.True(a.Document != b.Document);
             //a.Document.Should().NotBe(b.Document);
-
-            var aJson = JsonConvert.SerializeObject(a.Document);
-            var bJson = JsonConvert.SerializeObject(b.Document);
-
-            Assert.False(aJson == bJson);
         }
 
         private static Replica Merge(Replica a, Replica b)

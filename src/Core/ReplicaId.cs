@@ -15,5 +15,7 @@ namespace Mingle
             : base(id)
         {
         }
+
+        public override string ToString() => $"Id:{Value}";
     }
 }
