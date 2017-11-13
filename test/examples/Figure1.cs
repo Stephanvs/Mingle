@@ -55,18 +55,5 @@ namespace Mingle
 
         private static Replica Merge(Replica a, Replica b)
             => a.ApplyRemoteOps(b.GeneratedOps);
-
-        [Fact]
-        public void TestMapEquality()
-        {
-            var a = Map((1, "Rod"),
-                     (2, "Jane"),
-                     (3, "Freddy"));
-            var b = Map((1, "Rod"),
-                     (2, "Jane"),
-                     (3, "Freddy"));
-
-            Assert.True(a == b);
-        }
     }
 }
