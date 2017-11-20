@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using LanguageExt;
@@ -29,8 +29,7 @@ namespace Mingle
             {
                 case Cursor.Leaf l:
                     {
-                        // TODO: Replace variable decl with `var`
-                        ListRef k1Ref = GetNextRef(ListRef.FromKey(l.FinalKey));
+                        var k1Ref = GetNextRef(ListRef.FromKey(l.FinalKey));
 
                         switch (k1Ref)
                         {
