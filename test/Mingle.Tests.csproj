@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="4.19.4" />
+    <PackageReference Include="LanguageExt.Core" Version="2.1.23" />
+    <PackageReference Include="Machine.Specifications" Version="0.12.0" />
+    <PackageReference Include="Machine.Specifications.Runner.VisualStudio" Version="2.5.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="xunit" Version="2.3.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0" />
+    <ProjectReference Include="..\src\Mingle.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0" />
+    <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="2.0.0" />
+  </ItemGroup>
+</Project>
