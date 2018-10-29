@@ -2,8 +2,8 @@ using System;
 using Xunit;
 using FluentAssertions;
 using LanguageExt;
-using Newtonsoft.Json;
 using static LanguageExt.Prelude;
+using Newtonsoft.Json;
 
 namespace Mingle
 {
@@ -34,9 +34,9 @@ namespace Mingle
         private static void Converged(Replica a, Replica b)
         {
             Assert.Equal(a.ProcessedOps, b.ProcessedOps);
+            Assert.Equal(a.Document, b.Document);
             //a.ProcessedOps.ShouldBeEquivalentTo(b.ProcessedOps);
             //a.Document.Should().Be(b.Document);
-            Assert.Equal(a.Document, b.Document);
         }
 
         private static void Converged(Replica a, Replica b, Replica c)
@@ -48,8 +48,8 @@ namespace Mingle
         private static void Diverged(Replica a, Replica b)
         {
             Assert.NotEqual(a.ProcessedOps, b.ProcessedOps);
-            //a.ProcessedOps.Should().NotBeEquivalentTo(b.ProcessedOps);
             Assert.NotEqual(a.Document, b.Document);
+            //a.ProcessedOps.Should().NotBeEquivalentTo(b.ProcessedOps);
             //a.Document.Should().NotBe(b.Document);
         }
 
