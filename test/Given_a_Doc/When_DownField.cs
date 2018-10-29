@@ -18,7 +18,6 @@ namespace Mingle.Tests
             => Subject.Key.Should().Be("key");
 
         public static Doc Document;
-
         public static DownField Subject;
     }
 }
