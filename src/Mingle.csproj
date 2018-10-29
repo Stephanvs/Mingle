@@ -4,13 +4,9 @@
     <RootNamespace>Mingle</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="LanguageExt.Core" Version="2.1.23" />
+    <PackageReference Include="LanguageExt.Core" Version="3.0.31" />
     <PackageReference Include="System.Collections.Immutable" Version="1.4.0" />
     <PackageReference Include="System.Collections.Immutable.Analyzers" Version="1.2.0-beta2" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="2.0.0" />
   </ItemGroup>
 </Project>
