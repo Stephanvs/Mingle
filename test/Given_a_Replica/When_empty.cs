@@ -1,3 +1,4 @@
+using System.Numerics;
 using FluentAssertions;
 using LanguageExt;
 using Machine.Specifications;
@@ -14,7 +15,7 @@ namespace Mingle.Tests
             => Subject.ReplicaId.Should().Be(ReplicaId.New("1234"));
 
         It should_start_with_opsCounter_of_zero = ()
-            => Subject.CurrentId.OpsCounter.ShouldBeEquivalentTo(bigint.Zero);
+            => Subject.CurrentId.OpsCounter.ShouldBeEquivalentTo(BigInteger.Zero);
 
         static Replica Subject;
     }

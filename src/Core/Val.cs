@@ -1,3 +1,4 @@
+using System.Numerics;
 using LanguageExt;
 
 namespace Mingle
@@ -8,25 +9,41 @@ namespace Mingle
 
     public sealed class Num : Record<Num>, LeafVal
     {
-        private readonly bigint _value;
+        public readonly BigInteger Value;
 
-        public Num(bigint value)
+        public Num(BigInteger value)
         {
-            _value = value;
+            Value = value;
         }
-
-        public bigint Value => _value;
     }
 
     public sealed class Str : Record<Str>, LeafVal
     {
-        private readonly string _value;
+        public readonly string Value;
 
         public Str(string value)
         {
-            _value = value;
+            Value = value;
         }
+    }
 
-        public string Value => _value;
+    public sealed class True : Record<True>, LeafVal
+    {
+    }
+
+    public sealed class False : Record<False>, LeafVal
+    {
+    }
+
+    public sealed class Null : Record<Null>, LeafVal
+    {
+    }
+
+    public sealed class EmptyList : Record<EmptyList>, BranchVal
+    {
+    }
+
+    public sealed class EmptyMap : Record<EmptyMap>, BranchVal
+    {
     }
 }

@@ -3,17 +3,16 @@ using LanguageExt;
 
 namespace Mingle
 {
-    public /* immutable */ class Cursor
+    public /* immutable */ class Cursor : Record<Cursor>
     {
-        private Cursor(Lst<BranchTag> keys, Key finalKey)
+        public readonly Lst<BranchTag> Keys;
+        public readonly Key FinalKey;
+
+        internal Cursor(Lst<BranchTag> keys, Key finalKey)
         {
             Keys = keys;
             FinalKey = finalKey;
         }
-
-        public Lst<BranchTag> Keys { get; }
-
-        public Key FinalKey { get; }
 
         public Cursor Append(Func<Key, BranchTag> tag, Key newFinalKey)
         {
@@ -38,30 +37,24 @@ namespace Mingle
 
         public class Leaf : Record<Leaf>, IView
         {
-            private readonly Key _finalKey;
+            public readonly Key FinalKey;
 
             public Leaf(Key finalKey)
             {
-                _finalKey = finalKey;
+                FinalKey = finalKey;
             }
-
-            public Key FinalKey => _finalKey;
         }
 
         public class Branch : Record<Branch>, IView
         {
-            private readonly BranchTag _head;
-            private readonly Cursor _tail;
+            public readonly BranchTag Head;
+            public readonly Cursor Tail;
 
             public Branch(BranchTag head, Cursor tail)
             {
-                _head = head;
-                _tail = tail;
+                Head = head;
+                Tail = tail;
             }
-
-            public BranchTag Head => _head;
-
-            public Cursor Tail => _tail;
         }
     }
 }

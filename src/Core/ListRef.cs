@@ -2,6 +2,22 @@ using System;
 
 namespace Mingle
 {
+    public abstract class KeyRef : ListRef
+    {
+        public Key ToKey()
+        {
+            switch (this)
+            {
+                case IdR r: return new IdK(r.Id);
+                case HeadR _: return new HeadK();
+            }
+
+            throw new InvalidOperationException(
+                $"Cannot convert {this.GetType().Name} using method '{nameof(ToKey)}' to {nameof(Key)}. " +
+                $"Are you illegaly subclassing {nameof(KeyRef)}?");
+        }
+    }
+
     public abstract class ListRef
     {
         public static ListRef FromKey(Key key)
@@ -15,23 +31,7 @@ namespace Mingle
         }
     }
 
-    public abstract class KeyRef : ListRef
-    {
-        public Key ToKey()
-        {
-            switch (this)
-            {
-                case IdR r: return new IdK(r.Id);
-                case HeadR _: return new HeadK();
-            }
-
-            throw new InvalidOperationException(
-                $"Cannot convert {this.GetType().Name} using method '{nameof(ToKey)}' to {nameof(Key)}."
-                + " Are you illegaly subclassing {nameof(KeyRef)}?");
-        }
-    }
-
-    public class IdR : KeyRef
+    public sealed class IdR : KeyRef
     {
         public IdR(Id id)
         {

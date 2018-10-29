@@ -19,14 +19,12 @@ namespace Mingle
 
     public sealed class IdK : Record<IdK>, Key
     {
-        private readonly Id _id;
+        public readonly Id Id;
 
         public IdK(Id id)
         {
-            _id = id;
+            Id = id;
         }
-
-        public Id Id => _id;
 
         public int CompareTo(object obj)
         {
@@ -38,14 +36,12 @@ namespace Mingle
 
     public sealed class StrK : Record<StrK>, Key
     {
-        private readonly string _str;
+        public readonly string Str;
 
         public StrK(string str)
         {
-            _str = str;
+            Str = str;
         }
-
-        public string Str => _str;
 
         public int CompareTo(object obj)
         {

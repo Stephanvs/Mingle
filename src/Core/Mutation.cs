@@ -9,26 +9,22 @@ namespace Mingle
 
     public sealed class AssignM : Record<AssignM>, Mutation
     {
-        private readonly Val _value;
+        public readonly Val Value;
 
         public AssignM(Val value)
         {
-            _value = value;
+            Value = value;
         }
-
-        public Val Value => _value;
     }
 
     public sealed class InsertM : Record<InsertM>, Mutation
     {
-        private readonly Val _value;
+        public readonly Val Value;
 
         public InsertM(Val value)
         {
-            _value = value;
+            Value = value;
         }
-
-        public Val Value => _value;
     }
 
     public sealed class DeleteM : Record<DeleteM>, Mutation
@@ -37,17 +33,13 @@ namespace Mingle
 
     public sealed class MoveVerticalM : Record<MoveVerticalM>, Mutation
     {
-        private readonly Cursor _targetCursor;
-        private readonly BeforeAfter _aboveBelow;
+        public readonly Cursor TargetCursor;
+        public readonly BeforeAfter AboveBelow;
 
         public MoveVerticalM(Cursor targetCursor, BeforeAfter aboveBelow)
         {
-            _targetCursor = targetCursor;
-            _aboveBelow = aboveBelow;
+            TargetCursor = targetCursor;
+            AboveBelow = aboveBelow;
         }
-
-        public Cursor TargetCursor => _targetCursor;
-
-        public BeforeAfter AboveBelow => _aboveBelow;
     }
 }
