@@ -290,8 +290,7 @@ namespace Mingle
         {
             switch (mutation)
             {
-                case DeleteM del:
-                    return this;
+                case DeleteM del: return this;
                 default:
                     {
                         var pres = GetPres(tag.Key);
@@ -504,6 +503,9 @@ namespace Mingle
     {
         public readonly Map<ListRef, ListRef> Order;
 
+        /** The tests cannot converge, since the orderArchive of two replicas is
+        * always different. Therefore don't compare the orderArchive.
+        */
         [OptOutOfEq]
         [OptOutOfOrd]
         public readonly Map<BigInteger, Map<ListRef, ListRef>> OrderArchive;
