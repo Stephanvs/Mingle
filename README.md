@@ -1,8 +1,7 @@
 | branch | build status |
 |---|---|
-| `master` | [![Build Status](https://travis-ci.org/Stephanvs/Mingle.svg?branch=master)](https://travis-ci.org/Stephanvs/Mingle) |
-| `dev` | [![Build Status](https://travis-ci.org/Stephanvs/Mingle.svg?branch=dev)](https://travis-ci.org/Stephanvs/Mingle) |
-
+| `master` | [![Build Status](https://dev.azure.com/Stephanvs/Mingle/_apis/build/status/Stephanvs.Mingle?branchName=master)](https://dev.azure.com/Stephanvs/Mingle/_build/latest?definitionId=1) |
+| `dev` | [![Build Status](https://dev.azure.com/Stephanvs/Mingle/_apis/build/status/Stephanvs.Mingle?branchName=dev)](https://dev.azure.com/Stephanvs/Mingle/_build/latest?definitionId=1) |
 
 # What is a CRDT?
 
