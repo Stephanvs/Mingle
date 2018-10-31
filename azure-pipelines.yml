@@ -12,9 +12,16 @@ variables:
 steps:
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
+
 - task: DotNetCoreCLI@2
+  displayName: 'run unit tests'
   inputs:
     command: test
-    projects: '**/*Tests/*.csproj'
+    projects: 'test/**/*.csproj'
     arguments: '--configuration $(buildConfiguration) --collect "Code coverage"'
+
+- script: dotnet publish --output $(Build.ArtifactStagingDirectory)
+  displayName: 'dotnet publish'
+
 - task: PublishBuildArtifacts@1
+  displayName: 'publish build artifacts'
