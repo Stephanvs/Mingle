@@ -88,8 +88,6 @@ namespace Mingle
         {
             switch (this)
             {
-                // case ln: ListNode if (ln.orderArchive get op.id.c).isEmpty =>
-                //     ln.copy(orderArchive = ln.orderArchive + (op.id.c -> ln.order))
                 case ListNode ln:
                 {
                     if (ln.OrderArchive.Exists((k, v) => k == operation.Id.OpsCounter && v.IsEmpty))
