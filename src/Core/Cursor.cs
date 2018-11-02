@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using LanguageExt;
+using static LanguageExt.Prelude;
 
 namespace Mingle
 {
@@ -21,15 +23,18 @@ namespace Mingle
         }
 
         public Cursor.IView View()
-        {
-            return new Leaf(FinalKey);
-        }
+            => match<BranchTag, Cursor.IView>(Keys,
+                () => new Leaf(this.FinalKey),
+                (k1, kn) => new Branch(k1, new Cursor(kn.Freeze(), FinalKey)));
 
         public static Cursor Doc()
             => WithFinalKey(new DocK());
 
         public static Cursor WithFinalKey(Key finalKey)
             => new Cursor(Lst<BranchTag>.Empty, finalKey);
+
+        internal Cursor Copy(Lst<BranchTag>? keys = null, Key finalKey = null)
+            => new Cursor(keys: keys ?? Keys, finalKey: finalKey ?? FinalKey);
 
         public interface IView
         {
