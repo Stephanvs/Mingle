@@ -84,6 +84,10 @@ namespace Mingle.Tests
             var e2 = list.Iter().Next().Next();
             var e3 = list.Iter().Next().Next().Next();
             var cur = p1.EvalExpr(list.Iter());
+
+            Assert.Equal(p1.EvalExpr(e1), cur.Copy(finalKey: new IdK(new Id(4, ReplicaId.New("p")))));
+            Assert.Equal(p1.EvalExpr(e2), cur.Copy(finalKey: new IdK(new Id(3, ReplicaId.New("p")))));
+            Assert.Equal(p1.EvalExpr(e3), cur.Copy(finalKey: new IdK(new Id(2, ReplicaId.New("p")))));
         }
     }
 }
