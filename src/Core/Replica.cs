@@ -132,7 +132,7 @@ namespace Mingle
                             Cursor f(Cursor c)
                                 => c.Append(k => new ListT(k), new HeadK());
 
-                            return Go(it.Expr, fs.Add(f));
+                            return Go(it.Expr, fs.Insert(0, f));
                         }
 
                     case Next next:
