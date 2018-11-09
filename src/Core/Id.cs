@@ -11,6 +11,9 @@ namespace Mingle
         public readonly BigInteger OpsCounter;
         public readonly ReplicaId ReplicaId;
 
+        public Id(BigInteger opsCounter, string replicaId)
+            : this(opsCounter, new ReplicaId(replicaId)) {}
+
         public Id(BigInteger opsCounter, ReplicaId replicaId)
         {
             OpsCounter = opsCounter;

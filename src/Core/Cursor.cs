@@ -5,7 +5,7 @@ using static LanguageExt.Prelude;
 
 namespace Mingle
 {
-    public /* immutable */ class Cursor : Record<Cursor>
+    public /* immutable */ sealed class Cursor : Record<Cursor>
     {
         public readonly Lst<BranchTag> Keys;
         public readonly Key FinalKey;
@@ -17,10 +17,7 @@ namespace Mingle
         }
 
         public Cursor Append(Func<Key, BranchTag> tag, Key newFinalKey)
-        {
-            var branchTag = tag(FinalKey);
-            return new Cursor(Keys.Add(branchTag), newFinalKey);
-        }
+            => new Cursor(Keys.Add(tag(FinalKey)), newFinalKey);
 
         public Cursor.IView View()
             => match<BranchTag, Cursor.IView>(Keys,

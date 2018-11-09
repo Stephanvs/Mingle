@@ -206,6 +206,9 @@ namespace Mingle
                     return replica;
                 });
 
+        public static Replica Empty(string replicaId)
+            => Empty(new ReplicaId(replicaId));
+
         public static Replica Empty(ReplicaId replicaId)
             => new Replica(
                 replicaId,

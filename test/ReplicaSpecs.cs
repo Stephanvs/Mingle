@@ -9,7 +9,7 @@ namespace Mingle.Tests
         [Fact]
         public void EvalExpr_with_empty_doc_returns_cursor_with_finalKey_of_DocK()
         {
-            var p0 = Replica.Empty(ReplicaId.New("p"));
+            var p0 = Replica.Empty("p");
             var cursor = p0.EvalExpr(new Doc());
             var expected = Cursor.WithFinalKey(new DocK());
             Assert.Equal(expected, cursor);
@@ -18,7 +18,7 @@ namespace Mingle.Tests
         [Fact]
         public void EvalExpr_with_DownField_returns_cursor_with_correct_branchtag_and_key()
         {
-            var p0 = Replica.Empty(ReplicaId.New("p"));
+            var p0 = Replica.Empty("p");
             var cursor = p0.EvalExpr(new Doc().DownField("key"));
             var expected = new Cursor(List<BranchTag>(new MapT(new DocK())), new StrK("key"));
             Assert.Equal(expected, cursor);
@@ -27,7 +27,7 @@ namespace Mingle.Tests
         [Fact]
         public void EvalExpr_with_Iter_returns_cursor_with_correct_structure()
         {
-            var p0 = Replica.Empty(ReplicaId.New("p"));
+            var p0 = Replica.Empty("p");
             var cursor = p0.EvalExpr(new Doc().Iter());
             var expected = new Cursor(List<BranchTag>(new ListT(new DocK())), new HeadK());
             Assert.Equal(expected, cursor);
@@ -36,7 +36,7 @@ namespace Mingle.Tests
         [Fact]
         public void EvalExpr_with_DownField_and_Iter_returns_cursor_with_correct_structure()
         {
-            var p0 = Replica.Empty(ReplicaId.New("p"));
+            var p0 = Replica.Empty("p");
             var cursor = p0.EvalExpr(new Doc().DownField("key").Iter());
             var expected = new Cursor(List<BranchTag>(new MapT(new DocK()), new ListT(new StrK("key"))), new HeadK());
             Assert.Equal(expected, cursor);
@@ -45,7 +45,7 @@ namespace Mingle.Tests
         [Fact]
         public void EvalExpr_with_Iter_and_Next_returns_cursor_with_correct_structure()
         {
-            var p0 = Replica.Empty(ReplicaId.New("p"));
+            var p0 = Replica.Empty("p");
             var cursor = p0.EvalExpr(new Doc().Iter().Next());
             var expected = new Cursor(List<BranchTag>(new ListT(new DocK())), new HeadK());
             Assert.Equal(expected, cursor);
@@ -78,16 +78,16 @@ namespace Mingle.Tests
                 .Append(list.Iter().Insert("item2"))
                 .Append(list.Iter().Insert("item3"));
 
-            var p0 = Replica.Empty(ReplicaId.New("p"));
+            var p0 = Replica.Empty("p");
             var p1 = p0.ApplyCmd(cmd);
             var e1 = list.Iter().Next();
             var e2 = list.Iter().Next().Next();
             var e3 = list.Iter().Next().Next().Next();
             var cur = p1.EvalExpr(list.Iter());
 
-            Assert.Equal(p1.EvalExpr(e1), cur.Copy(finalKey: new IdK(new Id(4, ReplicaId.New("p")))));
-            Assert.Equal(p1.EvalExpr(e2), cur.Copy(finalKey: new IdK(new Id(3, ReplicaId.New("p")))));
-            Assert.Equal(p1.EvalExpr(e3), cur.Copy(finalKey: new IdK(new Id(2, ReplicaId.New("p")))));
+            Assert.Equal(cur.Copy(finalKey: new IdK(4, "p")), p1.EvalExpr(e1));
+            Assert.Equal(cur.Copy(finalKey: new IdK(3, "p")), p1.EvalExpr(e2));
+            Assert.Equal(cur.Copy(finalKey: new IdK(2, "p")), p1.EvalExpr(e3));
         }
     }
 }

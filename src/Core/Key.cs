@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using LanguageExt;
 
 namespace Mingle
@@ -20,6 +21,9 @@ namespace Mingle
     public sealed class IdK : Record<IdK>, Key
     {
         public readonly Id Id;
+
+        public IdK(BigInteger opsCounter, string replicaId)
+            : this(new Id(opsCounter, replicaId)) {}
 
         public IdK(Id id)
         {
