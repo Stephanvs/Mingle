@@ -7,7 +7,7 @@ using static LanguageExt.Prelude;
 
 namespace Mingle
 {
-    public abstract class Node : Record<Node>
+    public abstract class Node : Record<Node>, IComparable
     {
         public static Node EmptyMap
             => new MapNode(
@@ -40,7 +40,7 @@ namespace Mingle
                                     var k1 = keyRef.ToKey();
                                     var cur1 = Cursor.WithFinalKey(k1);
                                     // NEXT2
-                                    if (!GetPres(k1).IsEmpty) { return cur1; }
+                                    if (GetPres(k1).Any()) { return cur1; }
                                     // NEXT3
                                     else { return Next(cur1); }
                                 }
@@ -51,10 +51,11 @@ namespace Mingle
                 // NEXT4
                 case Cursor.Branch b:
                     {
-                        // FindChild(b.Head);
-                        // var cur2 = ;
-                        // return cursor.Copy(finalKey: cur2.FinalKey);
-                        throw new InvalidOperationException();
+                        return FindChild(b.Head).Fold(cursor, (s, child) =>
+                        {
+                            var cur2 = child.Next(s);
+                            return cursor.Copy(finalKey: cur2.FinalKey);
+                        });
                     }
 
                 default:
@@ -115,7 +116,17 @@ namespace Mingle
                                     {
                                         var allOps = replica.GeneratedOps.Append(replica.ReceivedOps);
 
-                                        throw new NotImplementedException();
+                                        foreach (var o in allOps)
+                                        {
+                                            if ((replica.ProcessedOps.Contains(o.Id) &&
+                                                (o.Mutation is InsertM || o.Mutation is DeleteM || o.Mutation is MoveVerticalM) &&
+                                                o.Id == op.Id) &&
+                                                o.Id.OpsCounter >= count &&
+                                                this.FindChild(new RegT(o.Cursor.FinalKey)).IsSome)
+                                            {
+                                                yield return o;
+                                            }
+                                        }
                                     }
 
                                     var concurrentOps = ConcurrentOpsSince(op.Id.OpsCounter);
@@ -238,7 +249,9 @@ namespace Mingle
                                 // the new op after the concurrent one with higher id. This way, when
                                 // inserted at the same place, the op whose user id is higher,
                                 // comes always fist.
-                                return ApplyAtLeaf(op.Copy(cursor: Cursor.WithFinalKey(new IdK(nextId.Id))), replica);
+                                if (op.Id > nextId.Id)
+                                    return ApplyAtLeaf(op.Copy(cursor: Cursor.WithFinalKey(new IdK(nextId.Id))), replica);
+                                else goto default;
                             }
                             // INSERT1
                             // INSERT1 performs the insertion by manipulating the linked
@@ -430,11 +443,13 @@ namespace Mingle
             {
                 case ListNode ln:
                 {
-                    return ln.Copy(order: ln.Order.Add(src, dst));
+                    return ln.Copy(order: ln.Order.AddOrUpdate(src, dst));
                 }
                 default: return this;
             }
         }
+
+        public abstract int CompareTo(object obj);
     }
 
     public abstract class BranchNode : Node
@@ -469,6 +484,18 @@ namespace Mingle
 
         public override BranchNode WithPresSets(Map<Key, Set<Id>> presSets)
             => Copy(presSets: presSets);
+
+        public override bool Equals(object other)
+            => RecordType<MapNode>.EqualityTyped(this, other as MapNode);
+
+        public override int GetHashCode()
+            => RecordType<MapNode>.Hash(this);
+
+        public override int CompareTo(object other)
+            => RecordType<MapNode>.Compare(this, other as MapNode);
+
+        public override int CompareTo(Node other)
+            => RecordType<MapNode>.Compare(this, other as MapNode);
 
         // public override bool Equals(object obj)
         // {
@@ -520,21 +547,28 @@ namespace Mingle
         }
 
         public override BranchNode WithChildren(Map<TypeTag, Node> children)
-        {
-            throw new NotImplementedException();
-        }
+            => Copy(children: children);
 
         public override BranchNode WithPresSets(Map<Key, Set<Id>> presSets)
-        {
-            throw new NotImplementedException();
-        }
+            => Copy(presSets: presSets);
+
+        public override bool Equals(object other)
+            => RecordType<ListNode>.EqualityTyped(this, other as ListNode);
+
+        public override int GetHashCode()
+            => RecordType<ListNode>.Hash(this);
+
+        public override int CompareTo(object other)
+            => RecordType<ListNode>.Compare(this, other as ListNode);
 
         internal ListNode Copy(
+            Map<Key, Set<Id>>? presSets = null,
+            Map<TypeTag, Node>? children = null,
             Map<ListRef, ListRef>? order = null,
             Map<BigInteger, Map<ListRef, ListRef>>? orderArchive = null)
             => new ListNode(
-                children: Children,
-                presSets: PresSets,
+                children: children ?? Children,
+                presSets: presSets ?? PresSets,
                 order: order ?? Order,
                 orderArchive: orderArchive ?? OrderArchive
             );
@@ -554,5 +588,14 @@ namespace Mingle
 
         public RegNode Copy(Map<Id, LeafVal>? regValues = null)
             => new RegNode(regValues ?? RegValues);
+
+        public override bool Equals(object other)
+            => RecordType<RegNode>.EqualityTyped(this, other as RegNode);
+
+        public override int GetHashCode()
+            => RecordType<RegNode>.Hash(this);
+
+        public override int CompareTo(object other)
+            => RecordType<RegNode>.Compare(this, other as RegNode);
     }
 }
