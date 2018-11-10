@@ -16,6 +16,6 @@ namespace Mingle
         {
         }
 
-        public override string ToString() => $"Id:{Value}";
+        public override string ToString() => $"ReplicaId({Value})";
     }
 }

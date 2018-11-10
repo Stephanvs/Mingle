@@ -33,10 +33,10 @@ namespace Mingle
 
         private static void Converged(Replica a, Replica b)
         {
-            Assert.True(a.ProcessedOps == b.ProcessedOps);;
+            Assert.Equal(a.ProcessedOps, b.ProcessedOps);
+            Assert.Equal(a.Document, b.Document);
             //a.ProcessedOps.ShouldBeEquivalentTo(b.ProcessedOps);
             //a.Document.Should().Be(b.Document);
-            Assert.True(a.Document == b.Document);
         }
 
         private static void Converged(Replica a, Replica b, Replica c)
@@ -47,9 +47,9 @@ namespace Mingle
 
         private static void Diverged(Replica a, Replica b)
         {
-            Assert.True(a.ProcessedOps != b.ProcessedOps);
+            Assert.NotEqual(a.ProcessedOps, b.ProcessedOps);
+            Assert.NotEqual(a.Document, b.Document);
             //a.ProcessedOps.Should().NotBeEquivalentTo(b.ProcessedOps);
-            Assert.True(a.Document != b.Document);
             //a.Document.Should().NotBe(b.Document);
         }
 

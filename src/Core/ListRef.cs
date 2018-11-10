@@ -1,8 +1,9 @@
 using System;
+using LanguageExt;
 
 namespace Mingle
 {
-    public abstract class ListRef
+    public abstract class ListRef : Record<ListRef>, IComparable
     {
         public static ListRef FromKey(Key key)
         {
@@ -13,6 +14,8 @@ namespace Mingle
                 default: return new TailR();
             }
         }
+
+        public abstract int CompareTo(object other);
     }
 
     public abstract class KeyRef : ListRef
@@ -26,22 +29,36 @@ namespace Mingle
             }
 
             throw new InvalidOperationException(
-                $"Cannot convert {this.GetType().Name} using method '{nameof(ToKey)}' to {nameof(Key)}."
-                + " Are you illegaly subclassing {nameof(KeyRef)}?");
+                $"Cannot convert {this.GetType().Name} using method '{nameof(ToKey)}' to {nameof(Key)}. " +
+                $"Are you illegaly subclassing {nameof(KeyRef)}?");
         }
+
+        public override int CompareTo(object other)
+            => RecordType<KeyRef>.Compare(this, other as KeyRef);
     }
 
-    public class IdR : KeyRef
+    public sealed class IdR : KeyRef
     {
+        public readonly Id Id;
+
         public IdR(Id id)
         {
             Id = id;
         }
 
-        public Id Id { get; }
+        public override int CompareTo(object other)
+            => RecordType<IdR>.Compare(this, other as IdR);
     }
 
-    public sealed class HeadR : KeyRef { }
+    public sealed class HeadR : KeyRef
+    {
+        public override int CompareTo(object other)
+            => RecordType<HeadR>.Compare(this, other as HeadR);
+    }
 
-    public sealed class TailR : ListRef { }
+    public sealed class TailR : ListRef
+    {
+        public override int CompareTo(object other)
+            => RecordType<TailR>.Compare(this, other as TailR);
+    }
 }

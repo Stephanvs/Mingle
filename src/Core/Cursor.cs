@@ -1,30 +1,28 @@
 using System;
+using System.Collections.Generic;
 using LanguageExt;
+using static LanguageExt.Prelude;
 
 namespace Mingle
 {
-    public /* immutable */ class Cursor
+    public /* immutable */ sealed class Cursor : Record<Cursor>
     {
-        private Cursor(Lst<BranchTag> keys, Key finalKey)
+        public readonly Lst<BranchTag> Keys;
+        public readonly Key FinalKey;
+
+        internal Cursor(Lst<BranchTag> keys, Key finalKey)
         {
             Keys = keys;
             FinalKey = finalKey;
         }
 
-        public Lst<BranchTag> Keys { get; }
-
-        public Key FinalKey { get; }
-
         public Cursor Append(Func<Key, BranchTag> tag, Key newFinalKey)
-        {
-            var branchTag = tag(FinalKey);
-            return new Cursor(Keys.Add(branchTag), newFinalKey);
-        }
+            => new Cursor(Keys.Add(tag(FinalKey)), newFinalKey);
 
         public Cursor.IView View()
-        {
-            return new Leaf(FinalKey);
-        }
+            => match<BranchTag, Cursor.IView>(Keys,
+                () => new Leaf(FinalKey),
+                (k1, kn) => new Branch(k1, new Cursor(kn.Freeze(), FinalKey)));
 
         public static Cursor Doc()
             => WithFinalKey(new DocK());
@@ -32,36 +30,33 @@ namespace Mingle
         public static Cursor WithFinalKey(Key finalKey)
             => new Cursor(Lst<BranchTag>.Empty, finalKey);
 
+        internal Cursor Copy(Lst<BranchTag>? keys = null, Key finalKey = null)
+            => new Cursor(keys: keys ?? Keys, finalKey: finalKey ?? FinalKey);
+
         public interface IView
         {
         }
 
-        public class Leaf : Record<Leaf>, IView
+        public sealed class Leaf : Record<Leaf>, IView
         {
-            private readonly Key _finalKey;
+            public readonly Key FinalKey;
 
             public Leaf(Key finalKey)
             {
-                _finalKey = finalKey;
+                FinalKey = finalKey;
             }
-
-            public Key FinalKey => _finalKey;
         }
 
-        public class Branch : Record<Branch>, IView
+        public sealed class Branch : Record<Branch>, IView
         {
-            private readonly BranchTag _head;
-            private readonly Cursor _tail;
+            public readonly BranchTag Head;
+            public readonly Cursor Tail;
 
             public Branch(BranchTag head, Cursor tail)
             {
-                _head = head;
-                _tail = tail;
+                Head = head;
+                Tail = tail;
             }
-
-            public BranchTag Head => _head;
-
-            public Cursor Tail => _tail;
         }
     }
 }

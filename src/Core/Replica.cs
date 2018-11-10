@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Numerics;
 using LanguageExt;
 using static LanguageExt.Prelude;
 
@@ -7,9 +8,17 @@ namespace Mingle
 {
     public /* immutable */ sealed class Replica : Record<Replica>
     {
+        public readonly ReplicaId ReplicaId;
+        public readonly BigInteger OpsCounter;
+        public readonly Node Document;
+        public readonly Map<Var, Cursor> Variables;
+        public readonly Set<Id> ProcessedOps;
+        public readonly Lst<Operation> GeneratedOps;
+        public readonly Lst<Operation> ReceivedOps;
+
         private Replica(
             ReplicaId replicaId,
-            bigint opsCounter,
+            BigInteger opsCounter,
             Node document,
             Map<Var, Cursor> variables,
             Set<Id> processedOps,
@@ -24,20 +33,6 @@ namespace Mingle
             GeneratedOps = generatedOps;
             ReceivedOps = receivedOps;
         }
-
-        public ReplicaId ReplicaId { get; }
-
-        public bigint OpsCounter { get; }
-
-        public Node Document { get; }
-
-        public Map<Var, Cursor> Variables { get; }
-
-        public Set<Id> ProcessedOps { get; }
-
-        public Lst<Operation> GeneratedOps { get; }
-
-        public Lst<Operation> ReceivedOps { get; }
 
         public Id CurrentId
             => new Id(OpsCounter, ReplicaId);
@@ -58,7 +53,7 @@ namespace Mingle
         public Replica ApplyRemote()
             => match(FindApplicableRemoteOp(),
                    Some: op => Copy(
-                       opsCounter: bigint.Max(OpsCounter, op.Id.OpsCounter),
+                       opsCounter: BigInteger.Max(OpsCounter, op.Id.OpsCounter),
                        document: Document.ApplyOp(op, this),
                        processedOps: ProcessedOps.Add(op.Id)).ApplyRemote(),
                    None: () => this);
@@ -67,11 +62,9 @@ namespace Mingle
             => Copy(receivedOps: ops.AddRange(ReceivedOps)).ApplyRemote();
 
         private Option<Operation> FindApplicableRemoteOp()
-        {
-            return ReceivedOps.Find(op
+            => ReceivedOps.Find(op
                 => !ProcessedOps.Contains(op.Id)
                 && op.Deps.IsSubsetOf(ProcessedOps));
-        }
 
         public Replica IncrementCounter()
             => Copy(opsCounter: OpsCounter + 1);
@@ -107,7 +100,7 @@ namespace Mingle
                             //     .Some(cur => cur)
                             //     .None(Cursor.Doc());
                             // Variables[var]
-                            // NOTE: This is not correct, I think I should iterate over each element in the `Variables` map, and foreach element lookup the 
+                            // NOTE: This is not correct, I think I should iterate over each element in the `Variables` map, and foreach element lookup the
                             // return match (Variables,
                             //     Some: cur => cur,
                             //     None: Cursor.Doc());
@@ -116,7 +109,7 @@ namespace Mingle
 
                     case DownField df:
                         {
-                            Cursor Func(Cursor c)
+                            Cursor f(Cursor c)
                             {
                                 switch (c.FinalKey)
                                 {
@@ -131,21 +124,21 @@ namespace Mingle
                                 }
                             }
 
-                            return Go(df.Expr, fs.Add(Func));
+                            return Go(df.Expr, fs.Insert(0, f));
                         }
 
                     case Iter it:
                         {
-                            Cursor Func(Cursor c)
+                            Cursor f(Cursor c)
                                 => c.Append(k => new ListT(k), new HeadK());
 
-                            return Go(it.Expr, fs.Add(Func));
+                            return Go(it.Expr, fs.Insert(0, f));
                         }
 
                     case Next next:
                         {
-                            Func<Cursor, Cursor> func = Document.Next;
-                            return Go(next.Expr, fs.Add(func));
+                            Func<Cursor, Cursor> f = Document.Next;
+                            return Go(next.Expr, fs.Insert(0, f));
                         }
 
                     default:
@@ -213,10 +206,13 @@ namespace Mingle
                     return replica;
                 });
 
+        public static Replica Empty(string replicaId)
+            => Empty(new ReplicaId(replicaId));
+
         public static Replica Empty(ReplicaId replicaId)
             => new Replica(
                 replicaId,
-                opsCounter: bigint.Zero,
+                opsCounter: BigInteger.Zero,
                 document: Node.EmptyMap,
                 variables: Map<Var, Cursor>(),
                 processedOps: Set<Id>(),
@@ -225,7 +221,7 @@ namespace Mingle
 
         private Replica Copy(
             ReplicaId replicaId = null,
-            bigint? opsCounter = null,
+            BigInteger? opsCounter = null,
             Node document = null,
             Map<Var, Cursor>? variables = null,
             Set<Id>? processedOps = null,

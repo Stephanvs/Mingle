@@ -13,53 +13,43 @@ namespace Mingle
 
     public sealed class Var : Record<Var>, Expr
     {
-        private readonly string _name;
+        public readonly string Name;
 
         public Var(string name)
         {
-            _name = name;
+            Name = name;
         }
-
-        public string Name => _name;
     }
 
     public sealed class DownField : Record<DownField>, Expr
     {
-        private readonly Expr _expr;
-        private readonly string _key;
+        public readonly Expr Expr;
+        public readonly string Key;
 
         public DownField(Expr expr, string key)
         {
-            _expr = expr;
-            _key = key;
+            Expr = expr;
+            Key = key;
         }
-
-        public Expr Expr => _expr;
-
-        public string Key => _key;
     }
 
     public sealed class Iter : Record<Iter>, Expr
     {
-        private readonly Expr _expr;
+        public readonly Expr Expr;
 
         public Iter(Expr expr)
         {
-            _expr = expr;
+            Expr = expr;
         }
-
-        public Expr Expr => _expr;
     }
 
     public sealed class Next : Record<Next>, Expr
     {
-        private readonly Expr _expr;
+        public readonly Expr Expr;
 
         public Next(Expr expr)
         {
-            _expr = expr;
+            Expr = expr;
         }
-
-        public Expr Expr => _expr;
     }
 }

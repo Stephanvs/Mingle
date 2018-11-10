@@ -1,27 +1,23 @@
 using System;
+using System.Numerics;
 using LanguageExt;
+using LanguageExt.ClassInstances;
+using LanguageExt.TypeClasses;
 
 namespace Mingle
 {
-    public /* immutable */ sealed class Id : Record<Id>, IComparable, IComparable<Id>
+    public /* immutable */ sealed class Id : Record<Id>
     {
-        private readonly bigint _opsCounter;
-        private readonly ReplicaId _replicaId;
+        public readonly BigInteger OpsCounter;
+        public readonly ReplicaId ReplicaId;
 
-        public Id(bigint opsCounter, ReplicaId replicaId)
+        public Id(BigInteger opsCounter, string replicaId)
+            : this(opsCounter, new ReplicaId(replicaId)) {}
+
+        public Id(BigInteger opsCounter, ReplicaId replicaId)
         {
-            _opsCounter = opsCounter;
-            _replicaId = replicaId;
+            OpsCounter = opsCounter;
+            ReplicaId = replicaId;
         }
-
-        public bigint OpsCounter => _opsCounter;
-
-        public ReplicaId ReplicaId => _replicaId;
-
-        public override int CompareTo(Id other)
-            => RecordType<Id>.Compare(this, other);
-
-        public int CompareTo(object obj)
-            => (obj is Id id) ? CompareTo(id) : 0;
     }
 }

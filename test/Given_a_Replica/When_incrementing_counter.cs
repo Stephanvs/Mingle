@@ -1,3 +1,4 @@
+using System.Numerics;
 using FluentAssertions;
 using LanguageExt;
 using Machine.Specifications;
@@ -17,7 +18,7 @@ namespace Mingle
             => Subject.Should().NotBeSameAs(Empty);
 
         It should_have_increased_the_counter = ()
-            => Subject.OpsCounter.ShouldBeEquivalentTo(bigint.One);
+            => Subject.OpsCounter.ShouldBeEquivalentTo(BigInteger.One);
 
         static Replica Empty;
         static Replica Subject;

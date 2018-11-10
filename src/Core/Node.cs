@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using LanguageExt;
 using static LanguageExt.Prelude;
 
 namespace Mingle
 {
-    public abstract class Node : Record<Node>
+    public abstract class Node : Record<Node>, IComparable
     {
         public static Node EmptyMap
             => new MapNode(
@@ -18,7 +19,7 @@ namespace Mingle
                 LanguageExt.Map<TypeTag, Node>.Empty,
                 LanguageExt.Map<Key, Set<Id>>.Empty,
                 LanguageExt.Map<ListRef, ListRef>.Empty,
-                LanguageExt.Map<bigint, Map<ListRef, ListRef>>.Empty);
+                LanguageExt.Map<BigInteger, Map<ListRef, ListRef>>.Empty);
 
         public static Node EmptyReg
             => new RegNode(LanguageExt.Map<Id, LeafVal>.Empty);
@@ -39,7 +40,7 @@ namespace Mingle
                                     var k1 = keyRef.ToKey();
                                     var cur1 = Cursor.WithFinalKey(k1);
                                     // NEXT2
-                                    if (!GetPres(k1).IsEmpty) { return cur1; }
+                                    if (GetPres(k1).Any()) { return cur1; }
                                     // NEXT3
                                     else { return Next(cur1); }
                                 }
@@ -50,10 +51,11 @@ namespace Mingle
                 // NEXT4
                 case Cursor.Branch b:
                     {
-                        // FindChild(b.Head);
-                        // var cur2 = ;
-                        // return cursor.Copy(finalKey: cur2.FinalKey);
-                        throw new InvalidOperationException();
+                        return FindChild(b.Head).Fold(cursor, (s, child) =>
+                        {
+                            var cur2 = child.Next(s);
+                            return cursor.Copy(finalKey: cur2.FinalKey);
+                        });
                     }
 
                 default:
@@ -74,6 +76,31 @@ namespace Mingle
             throw new NotImplementedException();
         }
 
+        /** If this node is a list: Save the order of item in the list.
+        * Don't overwrite if it already exists. Why? Assumed it would be overwritten
+        * and user1, user2 and user3 do an op concurrently. When user2's op arrives
+        * at user1, the order is reset and both ops are redone. Each time an op is
+        * applied, the order is saved. Therefore when the user2's op is applied, the
+        * order is saved. That's the order after user1's op was applied. When now
+        * user3's op arrives and the order is reset, the order we reset to should be
+        * the order before all three ops were applied. But it's not, since user2's op
+        * has overwritten the order. Therefore don't overwrite. */
+        private Node SaveOrder(Operation operation)
+        {
+            switch (this)
+            {
+                case ListNode ln:
+                {
+                    if (ln.OrderArchive.Exists((k, v) => k == operation.Id.OpsCounter && v.IsEmpty))
+                    {
+                        return ln.Copy(orderArchive: ln.OrderArchive.Add(operation.Id.OpsCounter, ln.Order));
+                    }
+                    return this;
+                }
+                default: return this;
+            }
+        }
+
         public Node ApplyOp(Operation op, Replica replica)
         {
             var view = op.Cursor.View();
@@ -85,11 +112,21 @@ namespace Mingle
                         {
                             case ListNode ln:
                                 {
-                                    IEnumerable<Operation> ConcurrentOpsSince(bigint count)
+                                    IEnumerable<Operation> ConcurrentOpsSince(BigInteger count)
                                     {
                                         var allOps = replica.GeneratedOps.Append(replica.ReceivedOps);
 
-                                        throw new NotImplementedException();
+                                        foreach (var o in allOps)
+                                        {
+                                            if ((replica.ProcessedOps.Contains(o.Id) &&
+                                                (o.Mutation is InsertM || o.Mutation is DeleteM || o.Mutation is MoveVerticalM) &&
+                                                o.Id == op.Id) &&
+                                                o.Id.OpsCounter >= count &&
+                                                this.FindChild(new RegT(o.Cursor.FinalKey)).IsSome)
+                                            {
+                                                yield return o;
+                                            }
+                                        }
                                     }
 
                                     var concurrentOps = ConcurrentOpsSince(op.Id.OpsCounter);
@@ -113,7 +150,7 @@ namespace Mingle
                                         var newerOrders = ln.OrderArchive.Filter((k, v) => k >= op.Id.OpsCounter);
 
                                         // restore the order
-                                        // TODO: 
+                                        // TODO:
                                         // val ctx1 =
                                         //     if (newerOrders.nonEmpty) ln.copy(order = newerOrders.minBy {
                                         //         case (c, _) => c
@@ -194,7 +231,45 @@ namespace Mingle
                     }
                 case InsertM ins:
                     {
-                        throw new NotImplementedException();
+                        var prevRef = ListRef.FromKey(k);
+                        var nextRef = GetNextRef(prevRef);
+                        switch (nextRef)
+                        {
+                            // INSERT2
+                            // INSERT 2 handles the case of multiple replicas concurrently
+                            // inserting list elements at the same position, and uses the
+                            // ordering relation < on Lamport timestamps to consistently
+                            // determine the insertion point.
+                            case IdR nextId:
+                            {
+                                // Normally, the nextId is lower, since it was already inserted and
+                                // newer ops have a higher id. NextId may be only higher, if two
+                                // insert operations are concurrent the one the other one - with the
+                                // higher id - was already inserted. When that's the case, insert
+                                // the new op after the concurrent one with higher id. This way, when
+                                // inserted at the same place, the op whose user id is higher,
+                                // comes always fist.
+                                if (op.Id > nextId.Id)
+                                    return ApplyAtLeaf(op.Copy(cursor: Cursor.WithFinalKey(new IdK(nextId.Id))), replica);
+                                else goto default;
+                            }
+                            // INSERT1
+                            // INSERT1 performs the insertion by manipulating the linked
+                            // list structure.
+                            default:
+                            {
+                                var idRef = new IdR(op.Id);
+                                // the ID of the inserted node will be the ID of the operation
+                                var ctx1 = ApplyAtLeaf(
+                                    op.Copy(cursor: Cursor.WithFinalKey(new IdK(op.Id)),
+                                            mutation: new AssignM(ins.Value)),
+                                    replica);
+                                var ctx2 = ctx1.SaveOrder(op);
+                                return ctx2
+                                    .SetNextRef(prevRef, idRef)
+                                    .SetNextRef(idRef, nextRef);
+                            }
+                        }
                     }
                 case MoveVerticalM mv:
                     {
@@ -227,22 +302,30 @@ namespace Mingle
             switch (mutation)
             {
                 case DeleteM del: return this;
-                default: {
+                default:
+                    {
                         var pres = GetPres(tag.Key);
                         var presP = pres.AddOrUpdate(id);
-                        return SetPres(tag.Key, presP);   
+                        return SetPres(tag.Key, presP);
                     }
             }
         }
 
         private (Node, Set<Id>) ClearElem(Set<Id> deps, Key key)
         {
-            throw new NotImplementedException();
+            var (ctx1, pres1) = ClearAny(deps, key);
+            var pres2 = ctx1.GetPres(key);
+            var pres3 = pres1.Append(pres2).Subtract(deps);
+            return (ctx1.SetPres(key, pres3), pres3);
         }
 
         private (Node, Set<Id>) ClearAny(Set<Id> deps, Key key)
         {
-            throw new NotImplementedException();
+            var ctx0 = this;
+            var (ctx1, pres1) = ctx0.Clear(deps, new MapT(key));
+            var (ctx2, pres2) = ctx1.Clear(deps, new ListT(key));
+            var (ctx3, pres3) = ctx2.Clear(deps, new RegT(key));
+            return (ctx3, pres1.Append(pres2).Append(pres3));
         }
 
         private (Node, Set<Id>) Clear(Set<Id> deps, TypeTag tag)
@@ -336,6 +419,15 @@ namespace Mingle
             }
         }
 
+        private ListRef GetPreviousRef(ListRef @ref)
+        {
+            switch (this)
+            {
+                case ListNode ln: { return ln.Order.ContainsKey(@ref) ? ln.Order[@ref] : new HeadR(); }
+                default: return new HeadR();
+            }
+        }
+
         private ListRef GetNextRef(ListRef @ref)
         {
             switch (this)
@@ -344,24 +436,34 @@ namespace Mingle
                 default: return new TailR();
             }
         }
+
+        private Node SetNextRef(ListRef src, ListRef dst)
+        {
+            switch (this)
+            {
+                case ListNode ln:
+                {
+                    return ln.Copy(order: ln.Order.AddOrUpdate(src, dst));
+                }
+                default: return this;
+            }
+        }
+
+        public abstract int CompareTo(object obj);
     }
 
     public abstract class BranchNode : Node
     {
-        private readonly Map<TypeTag, Node> _children;
-        private readonly Map<Key, Set<Id>> _presSets;
+        public readonly Map<TypeTag, Node> Children;
+        public readonly Map<Key, Set<Id>> PresSets;
 
         public BranchNode(
             Map<TypeTag, Node> children,
             Map<Key, Set<Id>> presSets)
         {
-            _children = children;
-            _presSets = presSets;
+            Children = children;
+            PresSets = presSets;
         }
-
-        public Map<TypeTag, Node> Children => _children;
-
-        public Map<Key, Set<Id>> PresSets => _presSets;
 
         public abstract BranchNode WithChildren(Map<TypeTag, Node> children);
 
@@ -382,6 +484,18 @@ namespace Mingle
 
         public override BranchNode WithPresSets(Map<Key, Set<Id>> presSets)
             => Copy(presSets: presSets);
+
+        public override bool Equals(object other)
+            => RecordType<MapNode>.EqualityTyped(this, other as MapNode);
+
+        public override int GetHashCode()
+            => RecordType<MapNode>.Hash(this);
+
+        public override int CompareTo(object other)
+            => RecordType<MapNode>.Compare(this, other as MapNode);
+
+        public override int CompareTo(Node other)
+            => RecordType<MapNode>.Compare(this, other as MapNode);
 
         // public override bool Equals(object obj)
         // {
@@ -412,73 +526,76 @@ namespace Mingle
 
     public class ListNode : BranchNode
     {
-        private readonly Map<ListRef, ListRef> _order;
+        public readonly Map<ListRef, ListRef> Order;
 
+        /** The tests cannot converge, since the orderArchive of two replicas is
+        * always different. Therefore don't compare the orderArchive.
+        */
         [OptOutOfEq]
         [OptOutOfOrd]
-        private readonly Map<bigint, Map<ListRef, ListRef>> _orderArchive;
+        public readonly Map<BigInteger, Map<ListRef, ListRef>> OrderArchive;
 
         public ListNode(
             Map<TypeTag, Node> children,
             Map<Key, Set<Id>> presSets,
             Map<ListRef, ListRef> order,
-            Map<bigint, Map<ListRef, ListRef>> orderArchive)
+            Map<BigInteger, Map<ListRef, ListRef>> orderArchive)
             : base(children, presSets)
         {
-            _order = order;
-            _orderArchive = orderArchive;
+            Order = order;
+            OrderArchive = orderArchive;
         }
-
-        public Map<ListRef, ListRef> Order => _order;
-
-        public Map<bigint, Map<ListRef, ListRef>> OrderArchive => _orderArchive;
 
         public override BranchNode WithChildren(Map<TypeTag, Node> children)
-        {
-            throw new NotImplementedException();
-        }
+            => Copy(children: children);
 
         public override BranchNode WithPresSets(Map<Key, Set<Id>> presSets)
-        {
-            throw new NotImplementedException();
-        }
+            => Copy(presSets: presSets);
 
-        // /** The tests cannot converge, since the orderArchive of two replicas is
-        // * always different. Therefore don't compare the orderArchive.
-        // */
-        // public override bool Equals(object obj)
-        // {
-        //     if (obj is ListNode ln)
-        //     {
-        //         return ln.Children == Children
-        //             && ln.PresSets == PresSets
-        //             && ln.Order == Order;
-        //     }
+        public override bool Equals(object other)
+            => RecordType<ListNode>.EqualityTyped(this, other as ListNode);
 
-        //     return base.Equals(obj);
-        // }
+        public override int GetHashCode()
+            => RecordType<ListNode>.Hash(this);
 
-        // public override int GetHashCode()
-        // {
-        //     throw new NotImplementedException();
-        // }
+        public override int CompareTo(object other)
+            => RecordType<ListNode>.Compare(this, other as ListNode);
+
+        internal ListNode Copy(
+            Map<Key, Set<Id>>? presSets = null,
+            Map<TypeTag, Node>? children = null,
+            Map<ListRef, ListRef>? order = null,
+            Map<BigInteger, Map<ListRef, ListRef>>? orderArchive = null)
+            => new ListNode(
+                children: children ?? Children,
+                presSets: presSets ?? PresSets,
+                order: order ?? Order,
+                orderArchive: orderArchive ?? OrderArchive
+            );
     }
 
     public class RegNode : Node
     {
-        private readonly Map<Id, LeafVal> _regValues;
+        public readonly Map<Id, LeafVal> RegValues;
 
         public RegNode(Map<Id, LeafVal> regValues)
         {
-            _regValues = regValues;
+            RegValues = regValues;
         }
-
-        public Map<Id, LeafVal> RegValues => _regValues;
 
         public Lst<LeafVal> Values()
             => new Lst<LeafVal>(RegValues.Values);
 
         public RegNode Copy(Map<Id, LeafVal>? regValues = null)
-            => new RegNode(regValues ?? _regValues);
+            => new RegNode(regValues ?? RegValues);
+
+        public override bool Equals(object other)
+            => RecordType<RegNode>.EqualityTyped(this, other as RegNode);
+
+        public override int GetHashCode()
+            => RecordType<RegNode>.Hash(this);
+
+        public override int CompareTo(object other)
+            => RecordType<RegNode>.Compare(this, other as RegNode);
     }
 }
