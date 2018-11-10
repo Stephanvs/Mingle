@@ -8,12 +8,12 @@ namespace Mingle
     {
     }
 
-    public class DocK : Record<DocK>, Key
+    public sealed class DocK : Record<DocK>, Key
     {
         public int CompareTo(object obj) => 0;
     }
 
-    public class HeadK : Record<HeadK>, Key
+    public sealed class HeadK : Record<HeadK>, Key
     {
         public int CompareTo(object obj) => 0;
     }

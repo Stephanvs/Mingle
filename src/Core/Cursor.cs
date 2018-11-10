@@ -21,7 +21,7 @@ namespace Mingle
 
         public Cursor.IView View()
             => match<BranchTag, Cursor.IView>(Keys,
-                () => new Leaf(this.FinalKey),
+                () => new Leaf(FinalKey),
                 (k1, kn) => new Branch(k1, new Cursor(kn.Freeze(), FinalKey)));
 
         public static Cursor Doc()
@@ -37,7 +37,7 @@ namespace Mingle
         {
         }
 
-        public class Leaf : Record<Leaf>, IView
+        public sealed class Leaf : Record<Leaf>, IView
         {
             public readonly Key FinalKey;
 
@@ -47,7 +47,7 @@ namespace Mingle
             }
         }
 
-        public class Branch : Record<Branch>, IView
+        public sealed class Branch : Record<Branch>, IView
         {
             public readonly BranchTag Head;
             public readonly Cursor Tail;
